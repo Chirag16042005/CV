@@ -4,7 +4,8 @@ import { ResumeData } from "./types";
 import { EditorPanel } from "./components/EditorPanel";
 import { ResumeSheet } from "./components/ResumeSheet";
 import { Edit, Eye, Sparkles, Printer, Download } from "lucide-react";
-import html2pdf from "html2pdf.js";
+import domToImage from "dom-to-image-more";
+import { jsPDF } from "jspdf";
 
 export default function App() {
   const [data, setData] = useState<ResumeData>(defaultResumeData);
@@ -53,15 +54,47 @@ export default function App() {
     try {
       const isLandscape = layoutMode === "horizontal";
       
-      const opt = {
-        margin:       0,
-        filename:     `resume_${data.fullName.replace(/\\s+/g, '_').toLowerCase() || 'document'}.pdf`,
-        image:        { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: (isLandscape ? 'landscape' : 'portrait') as 'landscape' | 'portrait' }
-      };
-
-      await html2pdf().set(opt).from(element).save();
+      const dataUrl = await domToImage.toJpeg(element, {
+        quality: 0.98,
+        bgcolor: '#ffffff',
+        // Optional: scale up for better resolution
+        width: element.clientWidth * 2,
+        height: element.clientHeight * 2,
+        style: {
+          transform: 'scale(2)',
+          transformOrigin: 'top left'
+        }
+      });
+      
+      const pdf = new jsPDF({
+        orientation: isLandscape ? "landscape" : "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calculate dimensions to preserve aspect ratio
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgRatio = imgProps.width / imgProps.height;
+      const pdfRatio = pdfWidth / pdfHeight;
+      
+      let drawWidth = pdfWidth;
+      let drawHeight = pdfHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+      
+      if (imgRatio > pdfRatio) {
+        drawHeight = pdfWidth / imgRatio;
+        offsetY = (pdfHeight - drawHeight) / 2;
+      } else {
+        drawWidth = pdfHeight * imgRatio;
+        offsetX = (pdfWidth - drawWidth) / 2;
+      }
+      
+      pdf.addImage(dataUrl, 'JPEG', offsetX, offsetY, drawWidth, drawHeight);
+      pdf.save(`resume_${data.fullName.replace(/\\s+/g, '_').toLowerCase() || 'document'}.pdf`);
       
     } catch (error: any) {
       console.error("PDF generation failed:", error);
