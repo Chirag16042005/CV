@@ -1,0 +1,6 @@
+{
+  "name": "Brutalist Notebook Resume",
+  "description": "An interactive, highly polished resume creator and previewer designed in a brutalist notebook style inspired by the user's reference. Includes live editing, custom styling, PDF-friendly printing, and server-side Gemini-powered resume parsing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
